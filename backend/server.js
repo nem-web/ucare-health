@@ -10,8 +10,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(helmet());
-app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'https://ucare-dt.vercel.app',
+  methods: ['GET','POST','PUT','DELETE'],
+  credentials: true
+}));
+
 app.use(morgan('combined'));
 app.use(express.json());
 
@@ -197,6 +204,11 @@ class EfficacyTracker {
 
 // API Routes
 
+// check api root
+app.get('/', (req, res) => {
+  res.send('🚀 Ucare Health Backend is live!');
+});
+
 // PHI System Endpoints
 app.get('/api/phi/calculate', (req, res) => {
   const phi = PHICalculator.calculatePHI(healthData.phi.rawMetrics);
@@ -347,5 +359,5 @@ app.post('/api/symptoms', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Ucare Health Backend with Advanced Analytics running on port ${PORT}`);
+  console.log(`Ucare Health Backend with Advanced Analytics running on port`);
 });
