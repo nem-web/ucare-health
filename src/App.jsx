@@ -15,7 +15,7 @@ import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { mockHealthData } from './data/mockData';
 import { reminderSystem } from './utils/reminderSystem';
 import { authService } from './services/authService';
-import { cloudService } from './services/cloudService';
+import { cloudSyncService } from './services/cloudSyncService';
 
 const theme = createTheme({
   palette: {
@@ -46,11 +46,21 @@ function App() {
       setUser(user);
       
       if (user) {
-        // Load health data from cloud
-        const cloudData = await cloudService.loadHealthData();
-        if (cloudData) {
+        // Set user for cloud sync
+        cloudSyncService.setCurrentUser(user);
+        
+        // Load user data from cloud
+        try {
+          const cloudData = await cloudSyncService.loadFromCloud();
           setHealthData(cloudData);
+        } catch (error) {
+          console.error('Failed to load cloud data:', error);
+          // Fallback to mock data
+          setHealthData(mockHealthData);
         }
+      } else {
+        // Clear data when user logs out
+        setHealthData(mockHealthData);
       }
       
       setLoading(false);
@@ -64,7 +74,8 @@ function App() {
     if (user && healthData) {
       const saveToCloud = async () => {
         try {
-          await cloudService.saveHealthData(healthData);
+          await cloudSyncService.syncToCloud(healthData);
+          localStorage.setItem('last_sync_time', new Date().toISOString());
         } catch (error) {
           console.error('Failed to sync to cloud:', error);
         }
@@ -88,8 +99,14 @@ function App() {
         });
       });
 
-      reminderSystem.scheduleDailyMedications(healthData.medications);
-      reminderSystem.scheduleAppointmentReminders(healthData.appointments);
+      reminderSystem.scheduleDailyMedications(healthData.medications || []);
+      reminderSystem.scheduleAppointmentReminders(healthData.appointments || []);
+      
+      // Schedule water reminders
+      if (healthData.waterSettings) {
+        reminderSystem.pushService.scheduleWaterReminders(healthData.waterSettings);
+      }
+      
       reminderSystem.startMonitoring();
     }
   }, [user, healthData]);
@@ -135,7 +152,7 @@ function App() {
   const handleAddAppointment = (newAppointment) => {
     setHealthData(prev => ({
       ...prev,
-      appointments: [newAppointment, ...prev.appointments]
+      appointments: [newAppointment, ...(prev.appointments || [])]
     }));
     
     reminderSystem.scheduleAppointmentReminders([newAppointment]);
@@ -143,6 +160,35 @@ function App() {
     setSnackbar({
       open: true,
       message: 'Appointment added and synced to cloud!',
+      severity: 'success'
+    });
+  };
+
+  const handleAddPrescription = (newPrescription) => {
+    setHealthData(prev => ({
+      ...prev,
+      prescriptions: [newPrescription, ...(prev.prescriptions || [])]
+    }));
+    
+    setSnackbar({
+      open: true,
+      message: 'Prescription added successfully!',
+      severity: 'success'
+    });
+  };
+
+  const handleUpdateWaterSettings = (newSettings) => {
+    setHealthData(prev => ({
+      ...prev,
+      waterSettings: newSettings
+    }));
+    
+    // Reschedule water reminders with new settings
+    reminderSystem.pushService.scheduleWaterReminders(newSettings);
+    
+    setSnackbar({
+      open: true,
+      message: 'Water reminder settings updated!',
       severity: 'success'
     });
   };
@@ -158,19 +204,6 @@ function App() {
     setSnackbar({
       open: true,
       message: 'Medication added and synced to cloud!',
-      severity: 'success'
-    });
-  };
-
-  const handleAddPrescription = (newPrescription) => {
-    setHealthData(prev => ({
-      ...prev,
-      prescriptions: [newPrescription, ...(prev.prescriptions || [])]
-    }));
-    
-    setSnackbar({
-      open: true,
-      message: 'Prescription uploaded and synced to cloud!',
       severity: 'success'
     });
   };
@@ -225,19 +258,6 @@ function App() {
     setSnackbar({
       open: true,
       message: 'Health metrics logged successfully!',
-      severity: 'success'
-    });
-  };
-
-  const handleUpdateWaterSettings = (waterSettings) => {
-    setHealthData(prev => ({
-      ...prev,
-      waterSettings
-    }));
-    
-    setSnackbar({
-      open: true,
-      message: 'Water reminder settings updated!',
       severity: 'success'
     });
   };

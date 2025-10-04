@@ -16,7 +16,12 @@ const Records = ({ healthData, onSymptomClick, onAddSymptom, onAddAppointment, o
   const [editingItem, setEditingItem] = useState(null);
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
-  const { symptoms, appointments, medications, prescriptions = [] } = healthData;
+  const { 
+    symptoms = [], 
+    appointments = [], 
+    medications = [], 
+    prescriptions = [] 
+  } = healthData || {};
 
   const getSeverityColor = (severity) => {
     if (severity <= 2) return 'bg-green-100 text-green-800';

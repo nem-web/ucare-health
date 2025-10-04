@@ -4,8 +4,9 @@ import { config } from '../config/env';
 export const authService = {
   currentUser: null,
   callbacks: [],
+  apiUrl: config.api.baseUrl || 'http://localhost:5000',
 
-  // Mock sign up (replace with Firebase when configured)
+  // Sign up with MongoDB user creation
   async signUp(email, password, name) {
     try {
       const user = {
@@ -14,6 +15,9 @@ export const authService = {
         displayName: name,
         createdAt: new Date().toISOString()
       };
+      
+      // Create user in MongoDB
+      await this.createUserInDatabase(user);
       
       localStorage.setItem('ucare_user', JSON.stringify(user));
       this.currentUser = user;
@@ -25,7 +29,7 @@ export const authService = {
     }
   },
 
-  // Mock sign in (replace with Firebase when configured)
+  // Sign in and load user from MongoDB
   async signIn(email, password) {
     try {
       const user = {
@@ -35,6 +39,9 @@ export const authService = {
         lastLogin: new Date().toISOString()
       };
       
+      // Create or update user in MongoDB
+      await this.createUserInDatabase(user);
+      
       localStorage.setItem('ucare_user', JSON.stringify(user));
       this.currentUser = user;
       this.notifyCallbacks(user);
@@ -42,6 +49,34 @@ export const authService = {
       return { success: true, user };
     } catch (error) {
       return { success: false, error: error.message };
+    }
+  },
+
+  // Create user in MongoDB database
+  async createUserInDatabase(user) {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          createdAt: user.createdAt || new Date().toISOString(),
+          lastLogin: user.lastLogin || new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create user: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to create user in database:', error);
+      // Don't throw error - allow offline functionality
     }
   },
 

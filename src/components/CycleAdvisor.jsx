@@ -5,10 +5,28 @@ import { Calendar, Heart, Droplets, TrendingUp, Edit, Plus, CheckCircle, AlertTr
 import { format, addDays, differenceInDays } from 'date-fns';
 import { CycleAnalysisService } from '../services/cycleAnalysisService';
 
-const CycleAdvisor = ({ cycleData, healthData, onUpdateCycle }) => {
+const CycleAdvisor = ({ cycleData = {}, healthData = {}, onUpdateCycle }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [logDialogOpen, setLogDialogOpen] = useState(false);
-  const [editData, setEditData] = useState(cycleData);
+  
+  // Safe destructuring with defaults
+  const {
+    lastPeriod = '',
+    cycleLength = 28,
+    phase = 'follicular',
+    daysUntilNext = 14,
+    logs = [],
+    cycleHistory = [],
+    symptoms = [],
+    predictions = {}
+  } = cycleData;
+
+  const [editData, setEditData] = useState({
+    lastPeriod: lastPeriod || '',
+    cycleLength: cycleLength || 28,
+    phase: phase || 'follicular'
+  });
+  
   const [logData, setLogData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
     flow: 'medium',
@@ -18,13 +36,22 @@ const CycleAdvisor = ({ cycleData, healthData, onUpdateCycle }) => {
   });
   const [analysis, setAnalysis] = useState(null);
 
+  // Update editData when cycleData changes
+  useEffect(() => {
+    setEditData({
+      lastPeriod: lastPeriod || '',
+      cycleLength: cycleLength || 28,
+      phase: phase || 'follicular'
+    });
+  }, [lastPeriod, cycleLength, phase]);
+
   // Calculate intelligent analysis on component mount and data changes
   useEffect(() => {
-    if (cycleData?.cycleHistory && cycleData.cycleHistory.length > 0) {
-      const stats = CycleAnalysisService.calculateCycleStats(cycleData.cycleHistory);
+    if (cycleHistory && cycleHistory.length > 0) {
+      const stats = CycleAnalysisService.calculateCycleStats(cycleHistory);
       if (stats) {
         const currentDelay = CycleAnalysisService.calculateCurrentDelay(
-          cycleData.lastPeriod, 
+          lastPeriod, 
           stats.averageCycleLength
         );
         
@@ -47,7 +74,7 @@ const CycleAdvisor = ({ cycleData, healthData, onUpdateCycle }) => {
     } else {
       setAnalysis(null);
     }
-  }, [cycleData, healthData]);
+  }, [cycleHistory, lastPeriod, healthData]);
 
   const getPhaseColor = (phase) => {
     const colors = {
@@ -432,7 +459,7 @@ const CycleAdvisor = ({ cycleData, healthData, onUpdateCycle }) => {
             Current Symptoms
           </Typography>
           <div className="flex flex-wrap gap-2">
-            {cycleData.symptoms.map((symptom, index) => (
+            {symptoms.map((symptom, index) => (
               <Chip 
                 key={index}
                 label={symptom.replace('_', ' ')}
@@ -483,7 +510,7 @@ const CycleAdvisor = ({ cycleData, healthData, onUpdateCycle }) => {
             <FormControl fullWidth>
               <InputLabel>Current Phase</InputLabel>
               <Select
-                value={editData.phase}
+                value={editData.phase || 'follicular'}
                 onChange={(e) => setEditData(prev => ({ ...prev, phase: e.target.value }))}
               >
                 <MenuItem value="menstrual">Menstrual</MenuItem>

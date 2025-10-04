@@ -165,7 +165,12 @@ export class SmartReminderSystem {
   }
 
   // Schedule appointment with push notification
-  async scheduleAppointmentReminders(appointments) {
+  async scheduleAppointmentReminders(appointments = []) {
+    if (!Array.isArray(appointments)) {
+      console.warn('Appointments is not an array, skipping appointment reminders');
+      return;
+    }
+
     for (const apt of appointments) {
       this.addReminder({
         type: 'appointment',

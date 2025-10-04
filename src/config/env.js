@@ -6,9 +6,15 @@ export const config = {
     url: import.meta.env.VITE_APP_URL || 'http://localhost:5173'
   },
   api: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 
+             (import.meta.env.PROD ? 'https://your-backend.vercel.app' : 'http://localhost:5000'),
     key: import.meta.env.VITE_API_KEY || '',
     useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true'
+  },
+  mongodb: {
+    uri: import.meta.env.VITE_MONGODB_URI || '',
+    dbName: import.meta.env.VITE_MONGODB_DB_NAME || 'ucare_health',
+    apiKey: import.meta.env.VITE_MONGODB_API_KEY || ''
   },
   firebase: {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',

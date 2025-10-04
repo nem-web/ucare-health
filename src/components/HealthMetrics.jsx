@@ -14,7 +14,7 @@ const HealthMetrics = ({ healthData, onUpdateMetrics }) => {
     exercise: ''
   });
 
-  const metrics = healthData.metrics || {
+  const metrics = healthData?.metrics || {
     logs: [],
     averages: { sleep: 0, nutrition: 0, exercise: 0 }
   };
@@ -45,7 +45,7 @@ const HealthMetrics = ({ healthData, onUpdateMetrics }) => {
   const calculateAverages = (logs) => {
     if (logs.length === 0) return { sleep: 0, nutrition: 0, exercise: 0 };
     
-    const userAge = healthData.profile?.age || 25;
+    const userAge = parseInt(healthData?.profile?.age) || 25;
     const targets = getAgeBasedTargets(userAge);
     
     const recent = logs.slice(-7); // Last 7 days
@@ -96,7 +96,7 @@ const HealthMetrics = ({ healthData, onUpdateMetrics }) => {
     });
   };
 
-  const userAge = parseInt(healthData.profile?.age) || 25;
+  const userAge = parseInt(healthData?.profile?.age) || 25;
   const targets = getAgeBasedTargets(userAge);
 
   const getAgeGroup = (age) => {
