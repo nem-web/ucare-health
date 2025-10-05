@@ -18,7 +18,7 @@ app.use(cors({
     'http://localhost:3000',
     'http://172.26.0.1:5176',
     'http://127.0.0.1:5173',
-    'https://your-app.vercel.app',
+    'https://ucare-dt.vercel.app',
     /\.vercel\.app$/,
     /localhost:\d+$/,
     /172\.26\.0\.1:\d+$/,
