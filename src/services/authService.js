@@ -9,6 +9,12 @@ export const authService = {
   // Sign up with MongoDB user creation
   async signUp(email, password, name) {
     try {
+      // Check if user already exists
+      const existingUser = await this.checkUserExists(email);
+      if (existingUser) {
+        return { success: false, error: 'User already exists. Please sign in instead.' };
+      }
+
       const user = {
         uid: Date.now().toString(),
         email,
@@ -17,7 +23,10 @@ export const authService = {
       };
       
       // Create user in MongoDB
-      await this.createUserInDatabase(user);
+      const result = await this.createUserInDatabase(user);
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
       
       localStorage.setItem('ucare_user', JSON.stringify(user));
       this.currentUser = user;
@@ -32,15 +41,19 @@ export const authService = {
   // Sign in and load user from MongoDB
   async signIn(email, password) {
     try {
+      // Check if user exists
+      const existingUser = await this.checkUserExists(email);
+      if (!existingUser) {
+        return { success: false, error: 'User not found. Please sign up first.' };
+      }
+
+      // Update last login
       const user = {
-        uid: Date.now().toString(),
-        email,
-        displayName: email.split('@')[0],
+        ...existingUser,
         lastLogin: new Date().toISOString()
       };
       
-      // Create or update user in MongoDB
-      await this.createUserInDatabase(user);
+      await this.updateUserLogin(user.uid);
       
       localStorage.setItem('ucare_user', JSON.stringify(user));
       this.currentUser = user;
@@ -49,6 +62,44 @@ export const authService = {
       return { success: true, user };
     } catch (error) {
       return { success: false, error: error.message };
+    }
+  },
+
+  // Check if user exists by email
+  async checkUserExists(email) {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/users/check/${encodeURIComponent(email)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        return result.exists ? result.user : null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to check user existence:', error);
+      return null;
+    }
+  },
+
+  // Update user login timestamp
+  async updateUserLogin(userId) {
+    try {
+      await fetch(`${this.apiUrl}/api/users/${userId}/login`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lastLogin: new Date().toISOString()
+        })
+      });
+    } catch (error) {
+      console.error('Failed to update user login:', error);
     }
   },
 
@@ -70,13 +121,14 @@ export const authService = {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to create user: ${response.statusText}`);
+        const errorData = await response.json();
+        return { success: false, error: errorData.error || 'Failed to create user' };
       }
 
-      return await response.json();
+      return { success: true, data: await response.json() };
     } catch (error) {
       console.error('Failed to create user in database:', error);
-      // Don't throw error - allow offline functionality
+      return { success: false, error: 'Network error. Please try again.' };
     }
   },
 

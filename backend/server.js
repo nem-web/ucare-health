@@ -55,7 +55,7 @@ const connectDB = async () => {
 // MongoDB Schemas
 const userSchema = new mongoose.Schema({
   userId: { type: String, required: true, unique: true },
-  email: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
   displayName: String,
   createdAt: { type: Date, default: Date.now },
   lastLogin: { type: Date, default: Date.now },
@@ -152,6 +152,84 @@ app.post('/api/health/:userId', async (req, res) => {
   }
 });
 
+// Check if user exists by email
+app.get('/api/users/check/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const decodedEmail = decodeURIComponent(email);
+    
+    console.log('Checking if user exists:', decodedEmail);
+    
+    if (isMongoConnected()) {
+      const user = await User.findOne({ email: decodedEmail });
+      
+      if (user) {
+        res.json({ exists: true, user });
+      } else {
+        res.json({ exists: false });
+      }
+    } else {
+      // Use in-memory storage
+      let userFound = null;
+      for (let [key, value] of memoryStorage.entries()) {
+        if (key.startsWith('user_') && value.email === decodedEmail) {
+          userFound = value;
+          break;
+        }
+      }
+      
+      if (userFound) {
+        res.json({ exists: true, user: userFound });
+      } else {
+        res.json({ exists: false });
+      }
+    }
+  } catch (error) {
+    console.error('Error checking user existence:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update user login timestamp
+app.patch('/api/users/:userId/login', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { lastLogin } = req.body;
+    
+    console.log('Updating login for user:', userId);
+    
+    if (isMongoConnected()) {
+      const user = await User.findOneAndUpdate(
+        { userId },
+        { lastLogin: lastLogin || new Date(), updatedAt: new Date() },
+        { new: true }
+      );
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      res.json({ success: true, user });
+    } else {
+      // Use in-memory storage
+      const user = memoryStorage.get(`user_${userId}`);
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      user.lastLogin = lastLogin || new Date();
+      user.updatedAt = new Date();
+      memoryStorage.set(`user_${userId}`, user);
+      
+      res.json({ success: true, user });
+    }
+  } catch (error) {
+    console.error('Error updating user login:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Create/Update user
 app.post('/api/users', async (req, res) => {
   try {
@@ -160,23 +238,32 @@ app.post('/api/users', async (req, res) => {
     console.log('Creating/updating user:', { userId, email, displayName });
     
     if (isMongoConnected()) {
-      const user = await User.findOneAndUpdate(
-        { userId },
-        { 
-          userId, 
-          email, 
-          displayName, 
-          createdAt: createdAt || new Date(),
-          lastLogin: lastLogin || new Date(),
-          updatedAt: new Date() 
-        },
-        { upsert: true, new: true }
-      );
+      // Check if user already exists by email
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(409).json({ error: 'User with this email already exists' });
+      }
+
+      const user = await User.create({
+        userId, 
+        email, 
+        displayName, 
+        createdAt: createdAt || new Date(),
+        lastLogin: lastLogin || new Date(),
+        updatedAt: new Date() 
+      });
       
-      console.log('User created/updated in MongoDB:', user);
+      console.log('User created in MongoDB:', user);
       res.json({ success: true, user });
     } else {
       // Use in-memory storage
+      // Check if user already exists by email
+      for (let [key, value] of memoryStorage.entries()) {
+        if (key.startsWith('user_') && value.email === email) {
+          return res.status(409).json({ error: 'User with this email already exists' });
+        }
+      }
+
       const userData = {
         userId, 
         email, 
@@ -186,12 +273,16 @@ app.post('/api/users', async (req, res) => {
         updatedAt: new Date()
       };
       memoryStorage.set(`user_${userId}`, userData);
-      console.log('User created/updated in memory storage');
+      console.log('User created in memory storage');
       res.json({ success: true, user: userData });
     }
   } catch (error) {
-    console.error('Error creating/updating user:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error creating user:', error);
+    if (error.code === 11000) {
+      res.status(409).json({ error: 'User with this email already exists' });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
   }
 });
 

@@ -40,6 +40,22 @@ const Auth = ({ onAuthSuccess }) => {
       onAuthSuccess(result.user);
     } else {
       setError(result.error);
+      // If user doesn't exist, suggest sign up
+      if (result.error.includes('User not found')) {
+        setError(
+          <div>
+            {result.error}
+            <Button 
+              variant="text" 
+              size="small" 
+              onClick={() => setActiveTab(1)}
+              className="ml-2 text-primary"
+            >
+              Sign up here
+            </Button>
+          </div>
+        );
+      }
     }
     
     setLoading(false);
@@ -68,6 +84,22 @@ const Auth = ({ onAuthSuccess }) => {
       onAuthSuccess(result.user);
     } else {
       setError(result.error);
+      // If user already exists, suggest sign in
+      if (result.error.includes('User already exists')) {
+        setError(
+          <div>
+            {result.error}
+            <Button 
+              variant="text" 
+              size="small" 
+              onClick={() => setActiveTab(0)}
+              className="ml-2 text-primary"
+            >
+              Sign in here
+            </Button>
+          </div>
+        );
+      }
     }
     
     setLoading(false);
@@ -133,6 +165,18 @@ const Auth = ({ onAuthSuccess }) => {
               >
                 {loading ? 'Signing In...' : 'Sign In'}
               </Button>
+
+              <Typography variant="body2" className="text-center text-gray-500 mt-3">
+                Don't have an account?{' '}
+                <Button 
+                  variant="text" 
+                  size="small" 
+                  onClick={() => setActiveTab(1)}
+                  className="text-primary p-0 min-w-0"
+                >
+                  Sign up here
+                </Button>
+              </Typography>
             </form>
           ) : (
             // Signup Form
@@ -182,6 +226,18 @@ const Auth = ({ onAuthSuccess }) => {
               >
                 {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
+
+              <Typography variant="body2" className="text-center text-gray-500 mt-3">
+                Already have an account?{' '}
+                <Button 
+                  variant="text" 
+                  size="small" 
+                  onClick={() => setActiveTab(0)}
+                  className="text-primary p-0 min-w-0"
+                >
+                  Sign in here
+                </Button>
+              </Typography>
             </form>
           )}
 
