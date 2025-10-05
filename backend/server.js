@@ -56,6 +56,7 @@ const connectDB = async () => {
 const userSchema = new mongoose.Schema({
   userId: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
   displayName: String,
   createdAt: { type: Date, default: Date.now },
   lastLogin: { type: Date, default: Date.now },
@@ -127,10 +128,11 @@ app.post('/api/health/:userId', async (req, res) => {
     console.log('Saving health data for user:', userId);
     
     if (isMongoConnected()) {
+      // Use findOneAndUpdate with upsert to update existing or create new
       const updatedData = await HealthData.findOneAndUpdate(
         { userId },
         { ...healthData, userId, updatedAt: new Date() },
-        { upsert: true, new: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true }
       );
       console.log('Data saved to MongoDB successfully');
       res.json({ success: true, data: updatedData });
@@ -149,6 +151,72 @@ app.post('/api/health/:userId', async (req, res) => {
     } catch (fallbackError) {
       res.status(500).json({ error: error.message });
     }
+  }
+});
+
+// Login endpoint
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    console.log('Login attempt for:', email);
+    
+    if (isMongoConnected()) {
+      const user = await User.findOne({ email });
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found. Please sign up first.' });
+      }
+      
+      if (user.password !== password) {
+        return res.status(401).json({ error: 'Invalid password' });
+      }
+      
+      // Update last login
+      user.lastLogin = new Date();
+      await user.save();
+      
+      res.json({ 
+        success: true, 
+        user: {
+          uid: user.userId,
+          email: user.email,
+          displayName: user.displayName
+        }
+      });
+    } else {
+      // Use in-memory storage
+      let userFound = null;
+      for (let [key, value] of memoryStorage.entries()) {
+        if (key.startsWith('user_') && value.email === email) {
+          userFound = value;
+          break;
+        }
+      }
+      
+      if (!userFound) {
+        return res.status(404).json({ error: 'User not found. Please sign up first.' });
+      }
+      
+      if (userFound.password !== password) {
+        return res.status(401).json({ error: 'Invalid password' });
+      }
+      
+      userFound.lastLogin = new Date();
+      memoryStorage.set(`user_${userFound.userId}`, userFound);
+      
+      res.json({ 
+        success: true, 
+        user: {
+          uid: userFound.userId,
+          email: userFound.email,
+          displayName: userFound.displayName
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -233,7 +301,7 @@ app.patch('/api/users/:userId/login', async (req, res) => {
 // Create/Update user
 app.post('/api/users', async (req, res) => {
   try {
-    const { userId, email, displayName, createdAt, lastLogin } = req.body;
+    const { userId, email, password, displayName, createdAt, lastLogin } = req.body;
     
     console.log('Creating/updating user:', { userId, email, displayName });
     
@@ -246,7 +314,8 @@ app.post('/api/users', async (req, res) => {
 
       const user = await User.create({
         userId, 
-        email, 
+        email,
+        password,
         displayName, 
         createdAt: createdAt || new Date(),
         lastLogin: lastLogin || new Date(),

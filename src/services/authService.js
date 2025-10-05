@@ -23,7 +23,7 @@ export const authService = {
       };
       
       // Create user in MongoDB
-      const result = await this.createUserInDatabase(user);
+      const result = await this.createUserInDatabase(user, password);
       if (!result.success) {
         return { success: false, error: result.error };
       }
@@ -41,27 +41,28 @@ export const authService = {
   // Sign in and load user from MongoDB
   async signIn(email, password) {
     try {
-      // Check if user exists
-      const existingUser = await this.checkUserExists(email);
-      if (!existingUser) {
-        return { success: false, error: 'User not found. Please sign up first.' };
+      const response = await fetch(`${this.apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: result.error };
       }
 
-      // Update last login
-      const user = {
-        ...existingUser,
-        lastLogin: new Date().toISOString()
-      };
-      
-      await this.updateUserLogin(user.uid);
-      
+      const user = result.user;
       localStorage.setItem('ucare_user', JSON.stringify(user));
       this.currentUser = user;
       this.notifyCallbacks(user);
       
       return { success: true, user };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: 'Network error. Please try again.' };
     }
   },
 
@@ -104,7 +105,7 @@ export const authService = {
   },
 
   // Create user in MongoDB database
-  async createUserInDatabase(user) {
+  async createUserInDatabase(user, password) {
     try {
       const response = await fetch(`${this.apiUrl}/api/users`, {
         method: 'POST',
@@ -114,6 +115,7 @@ export const authService = {
         body: JSON.stringify({
           userId: user.uid,
           email: user.email,
+          password: password,
           displayName: user.displayName,
           createdAt: user.createdAt || new Date().toISOString(),
           lastLogin: user.lastLogin || new Date().toISOString()
@@ -156,8 +158,22 @@ export const authService = {
     // Check for existing user on load
     const savedUser = localStorage.getItem('ucare_user');
     if (savedUser) {
-      this.currentUser = JSON.parse(savedUser);
-      callback(this.currentUser);
+      try {
+        const user = JSON.parse(savedUser);
+        // Ensure user has required properties
+        if (user && user.uid && user.email) {
+          this.currentUser = user;
+          callback(this.currentUser);
+        } else {
+          // Invalid user data, clear it
+          localStorage.removeItem('ucare_user');
+          callback(null);
+        }
+      } catch (error) {
+        // Invalid JSON, clear it
+        localStorage.removeItem('ucare_user');
+        callback(null);
+      }
     } else {
       callback(null);
     }

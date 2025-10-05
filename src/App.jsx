@@ -46,7 +46,7 @@ function App() {
       setUser(user);
       
       if (user) {
-        // Set user for cloud sync
+        // Set user for cloud service
         cloudSyncService.setCurrentUser(user);
         
         // Load user data from cloud
@@ -55,11 +55,9 @@ function App() {
           setHealthData(cloudData);
         } catch (error) {
           console.error('Failed to load cloud data:', error);
-          // Fallback to mock data
           setHealthData(mockHealthData);
         }
       } else {
-        // Clear data when user logs out
         setHealthData(mockHealthData);
       }
       
@@ -68,24 +66,6 @@ function App() {
 
     return () => unsubscribe();
   }, []);
-
-  // Auto-save to cloud when health data changes
-  useEffect(() => {
-    if (user && healthData) {
-      const saveToCloud = async () => {
-        try {
-          await cloudSyncService.syncToCloud(healthData);
-          localStorage.setItem('last_sync_time', new Date().toISOString());
-        } catch (error) {
-          console.error('Failed to sync to cloud:', error);
-        }
-      };
-      
-      // Debounce saves
-      const timeoutId = setTimeout(saveToCloud, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [healthData, user]);
 
   // Setup reminders when user is authenticated
   useEffect(() => {
@@ -136,30 +116,35 @@ function App() {
     });
   };
 
-  const handleAddSymptom = (newSymptom) => {
-    setHealthData(prev => ({
-      ...prev,
-      symptoms: [newSymptom, ...prev.symptoms]
-    }));
+  const handleAddSymptom = async (newSymptom) => {
+    const updatedData = {
+      ...healthData,
+      symptoms: [newSymptom, ...healthData.symptoms]
+    };
+    setHealthData(updatedData);
+    
+    await cloudSyncService.saveToCloud(updatedData);
     
     setSnackbar({
       open: true,
-      message: 'Symptom added and synced to cloud!',
+      message: 'Symptom added and saved to cloud!',
       severity: 'success'
     });
   };
 
-  const handleAddAppointment = (newAppointment) => {
-    setHealthData(prev => ({
-      ...prev,
-      appointments: [newAppointment, ...(prev.appointments || [])]
-    }));
+  const handleAddAppointment = async (newAppointment) => {
+    const updatedData = {
+      ...healthData,
+      appointments: [newAppointment, ...(healthData.appointments || [])]
+    };
+    setHealthData(updatedData);
     
+    await cloudSyncService.saveToCloud(updatedData);
     reminderSystem.scheduleAppointmentReminders([newAppointment]);
     
     setSnackbar({
       open: true,
-      message: 'Appointment added and synced to cloud!',
+      message: 'Appointment added and saved to cloud!',
       severity: 'success'
     });
   };
@@ -193,17 +178,19 @@ function App() {
     });
   };
 
-  const handleAddMedication = (newMedication) => {
-    setHealthData(prev => ({
-      ...prev,
-      medications: [newMedication, ...prev.medications]
-    }));
+  const handleAddMedication = async (newMedication) => {
+    const updatedData = {
+      ...healthData,
+      medications: [newMedication, ...healthData.medications]
+    };
+    setHealthData(updatedData);
     
+    await cloudSyncService.saveToCloud(updatedData);
     reminderSystem.scheduleDailyMedications([newMedication]);
     
     setSnackbar({
       open: true,
-      message: 'Medication added and synced to cloud!',
+      message: 'Medication added and saved to cloud!',
       severity: 'success'
     });
   };
@@ -282,15 +269,18 @@ function App() {
     });
   };
 
-  const handleUpdateProfile = (updatedProfile) => {
-    setHealthData(prev => ({
-      ...prev,
+  const handleUpdateProfile = async (updatedProfile) => {
+    const updatedData = {
+      ...healthData,
       profile: updatedProfile
-    }));
+    };
+    setHealthData(updatedData);
+    
+    await cloudSyncService.saveToCloud(updatedData);
     
     setSnackbar({
       open: true,
-      message: 'Profile updated and synced to cloud!',
+      message: 'Profile updated and saved to cloud!',
       severity: 'success'
     });
   };
