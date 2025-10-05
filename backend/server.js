@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
@@ -168,7 +169,8 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(404).json({ error: 'User not found. Please sign up first.' });
       }
       
-      if (user.password !== password) {
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
         return res.status(401).json({ error: 'Invalid password' });
       }
       
@@ -198,7 +200,8 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(404).json({ error: 'User not found. Please sign up first.' });
       }
       
-      if (userFound.password !== password) {
+      const isValidPassword = await bcrypt.compare(password, userFound.password);
+      if (!isValidPassword) {
         return res.status(401).json({ error: 'Invalid password' });
       }
       
@@ -303,7 +306,10 @@ app.post('/api/users', async (req, res) => {
   try {
     const { userId, email, password, displayName, createdAt, lastLogin } = req.body;
     
-    console.log('Creating/updating user:', { userId, email, displayName });
+    console.log('Creating user:', { userId, email, displayName });
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
     
     if (isMongoConnected()) {
       // Check if user already exists by email
@@ -315,7 +321,7 @@ app.post('/api/users', async (req, res) => {
       const user = await User.create({
         userId, 
         email,
-        password,
+        password: hashedPassword,
         displayName, 
         createdAt: createdAt || new Date(),
         lastLogin: lastLogin || new Date(),
@@ -335,7 +341,8 @@ app.post('/api/users', async (req, res) => {
 
       const userData = {
         userId, 
-        email, 
+        email,
+        password: hashedPassword,
         displayName, 
         createdAt: createdAt || new Date(),
         lastLogin: lastLogin || new Date(),
