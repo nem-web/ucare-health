@@ -9,6 +9,7 @@ import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
 import Records from './components/Records';
 import CycleAdvisor from './components/CycleAdvisor';
+import Fitness from './components/Fitness';
 import Profile from './components/Profile';
 import Auth from './components/Auth';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
@@ -269,6 +270,22 @@ function App() {
     });
   };
 
+  const handleUpdateFitness = async (updatedFitness) => {
+    const updatedData = {
+      ...healthData,
+      fitness: updatedFitness
+    };
+    setHealthData(updatedData);
+    
+    await cloudSyncService.saveToCloud(updatedData);
+    
+    setSnackbar({
+      open: true,
+      message: 'Fitness data updated and saved to cloud!',
+      severity: 'success'
+    });
+  };
+
   const handleUpdateProfile = async (updatedProfile) => {
     const updatedData = {
       ...healthData,
@@ -336,6 +353,13 @@ function App() {
             onUpdateCycle={handleUpdateCycle}
           />
         );
+      case 'fitness':
+        return (
+          <Fitness 
+            healthData={healthData}
+            onUpdateFitness={handleUpdateFitness}
+          />
+        );
       case 'profile':
         return (
           <Profile 
@@ -367,6 +391,7 @@ function App() {
           activeTab={activeTab} 
           onTabChange={setActiveTab}
           notifications={notifications}
+          userSex={user?.sex}
         />
         
         <main className="pt-16 px-4">

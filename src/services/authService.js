@@ -7,7 +7,7 @@ export const authService = {
   apiUrl: config.api.baseUrl || 'http://localhost:5000',
 
   // Sign up with MongoDB user creation
-  async signUp(email, password, name) {
+  async signUp(email, password, name, sex) {
     try {
       // Check if user already exists
       const existingUser = await this.checkUserExists(email);
@@ -19,6 +19,7 @@ export const authService = {
         uid: Date.now().toString(),
         email,
         displayName: name,
+        sex: sex,
         createdAt: new Date().toISOString()
       };
       
@@ -117,6 +118,7 @@ export const authService = {
           email: user.email,
           password: password,
           displayName: user.displayName,
+          sex: user.sex,
           createdAt: user.createdAt || new Date().toISOString(),
           lastLogin: user.lastLogin || new Date().toISOString()
         })

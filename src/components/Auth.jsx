@@ -8,7 +8,11 @@ import {
   Box, 
   Alert,
   Tabs,
-  Tab
+  Tab,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { Heart } from 'lucide-react';
 import { authService } from '../services/authService';
@@ -21,7 +25,8 @@ const Auth = ({ onAuthSuccess }) => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    sex: ''
   });
 
   const handleInputChange = (field, value) => {
@@ -78,7 +83,7 @@ const Auth = ({ onAuthSuccess }) => {
       return;
     }
 
-    const result = await authService.signUp(formData.email, formData.password, formData.name);
+    const result = await authService.signUp(formData.email, formData.password, formData.name, formData.sex);
     
     if (result.success) {
       onAuthSuccess(result.user);
@@ -188,6 +193,18 @@ const Auth = ({ onAuthSuccess }) => {
                 fullWidth
                 required
               />
+
+              <FormControl fullWidth required>
+                <InputLabel>Sex</InputLabel>
+                <Select
+                  value={formData.sex}
+                  label="Sex"
+                  onChange={(e) => handleInputChange('sex', e.target.value)}
+                >
+                  <MenuItem value="M">Male</MenuItem>
+                  <MenuItem value="F">Female</MenuItem>
+                </Select>
+              </FormControl>
 
               <TextField
                 label="Email"

@@ -31,6 +31,32 @@ export class SmartReminderSystem {
     return pushEnabled;
   }
 
+  // Play notification sound
+  playNotificationSound() {
+    try {
+      // Create audio context for better browser support
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Create a simple beep sound
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.log('Audio not supported or blocked:', error);
+    }
+  }
+
   addReminder(reminder) {
     this.reminders.push({
       ...reminder,
@@ -82,6 +108,7 @@ export class SmartReminderSystem {
     }
 
     // Also trigger in-app callbacks
+    this.playNotificationSound();
     this.callbacks.forEach(callback => callback(reminder));
   }
 

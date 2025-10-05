@@ -59,6 +59,8 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   displayName: String,
+  sex: { type: String, enum: ['M', 'F'], required: true },
+  profileImage: String,
   createdAt: { type: Date, default: Date.now },
   lastLogin: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -183,7 +185,8 @@ app.post('/api/auth/login', async (req, res) => {
         user: {
           uid: user.userId,
           email: user.email,
-          displayName: user.displayName
+          displayName: user.displayName,
+          sex: user.sex
         }
       });
     } else {
@@ -304,7 +307,7 @@ app.patch('/api/users/:userId/login', async (req, res) => {
 // Create/Update user
 app.post('/api/users', async (req, res) => {
   try {
-    const { userId, email, password, displayName, createdAt, lastLogin } = req.body;
+    const { userId, email, password, displayName, sex, createdAt, lastLogin } = req.body;
     
     console.log('Creating user:', { userId, email, displayName });
     
@@ -322,7 +325,8 @@ app.post('/api/users', async (req, res) => {
         userId, 
         email,
         password: hashedPassword,
-        displayName, 
+        displayName,
+        sex,
         createdAt: createdAt || new Date(),
         lastLogin: lastLogin || new Date(),
         updatedAt: new Date() 

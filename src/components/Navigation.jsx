@@ -3,13 +3,24 @@ import { Home, FileText, Calendar, User, Bell, TestTube } from 'lucide-react';
 import { AppBar, Toolbar, Typography, IconButton, Badge } from '@mui/material';
 import { reminderSystem } from '../utils/reminderSystem';
 
-const Navigation = ({ activeTab, onTabChange, notifications = 0 }) => {
-  const navItems = [
-    { id: 'dashboard', icon: Home, label: 'Dashboard' },
-    { id: 'records', icon: FileText, label: 'Records' },
-    { id: 'cycle', icon: Calendar, label: 'Cycle' },
-    { id: 'profile', icon: User, label: 'Profile' }
-  ];
+const Navigation = ({ activeTab, onTabChange, notifications = 0, userSex }) => {
+  const getNavItems = () => {
+    const baseItems = [
+      { id: 'dashboard', icon: Home, label: 'Dashboard' },
+      { id: 'records', icon: FileText, label: 'Records' }
+    ];
+
+    if (userSex === 'F') {
+      baseItems.push({ id: 'cycle', icon: Calendar, label: 'Cycle' });
+    } else {
+      baseItems.push({ id: 'fitness', icon: TestTube, label: 'Fitness' });
+    }
+
+    baseItems.push({ id: 'profile', icon: User, label: 'Profile' });
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   const handleTestNotification = async () => {
     await reminderSystem.testNotification();

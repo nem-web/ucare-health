@@ -6,6 +6,7 @@ const Profile = ({ profileData, userInfo, onUpdateProfile }) => {
   const [editing, setEditing] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
+    displayName: userInfo?.displayName || '',
     age: profileData?.age || '',
     bloodGroup: profileData?.bloodGroup || '',
     height: profileData?.height || '',
@@ -72,7 +73,16 @@ const Profile = ({ profileData, userInfo, onUpdateProfile }) => {
             </div>
             
             <Typography variant="h5" className="font-bold mb-1">
-              {userInfo?.displayName || 'User'}
+              {editing ? (
+                <TextField
+                  value={formData.displayName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
+                  variant="standard"
+                  className="text-xl font-bold"
+                />
+              ) : (
+                formData.displayName || userInfo?.displayName || 'User'
+              )}
             </Typography>
             <Typography variant="body2" className="text-gray-600 mb-4">
               {userInfo?.email}
@@ -154,11 +164,12 @@ const Profile = ({ profileData, userInfo, onUpdateProfile }) => {
           <div className="space-y-4">
             <TextField
               label="Full Name"
-              value={userInfo?.displayName || ''}
+              value={formData.displayName}
+              onChange={(e) => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
               fullWidth
-              disabled
+              disabled={!editing}
               variant="filled"
-              helperText="Name is set during account creation"
+              helperText={editing ? "You can change your display name" : "Name is set during account creation"}
             />
             
             <TextField
